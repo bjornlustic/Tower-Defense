@@ -1,0 +1,49 @@
+{
+    "1": {
+        "green": 6
+    },
+    "2": {
+        "green": 12,
+        "purple": 1
+    },
+    "3": {
+        "green": 18,
+        "purple": 6
+    },
+    "4": {
+        "green": 20,
+        "purple": 8,
+        "blue": 3
+    },
+    "5": {
+        "green": 26,
+        "purple": 10,
+        "blue": 5
+    },
+    "6": {
+        "green": 30,
+        "purple": 12,
+        "blue": 9
+    },
+    "7": {
+        "green": 36,
+        "purple": 15,
+        "blue": 11
+    },
+    "8": {
+        "green": 39,
+        "purple": 18,
+        "blue": 13
+    },
+    "9": {
+        "green": 43,
+        "purple": 21,
+        "blue": 14
+    },
+    "10": {
+        "green": 45,
+        "purple": 22,
+        "blue": 16
+    }
+
+}
