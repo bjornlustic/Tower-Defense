@@ -37,6 +37,7 @@ enemies_spawned = 0  # Track how many enemies have been spawned
 green_enemies = 0
 purple_enemies = 0
 blue_enemies = 0
+red_enemies = 0
 total_enemies = 0
 
 # Load level configuration from a JSON file
@@ -47,14 +48,15 @@ def load_level_config(filename='level_config.json'):
 # Use this function to get the number of enemies for the current level
 def get_number_of_enemies_for_level(level, config):
     # Default to an empty dictionary if the level is not found
-    level_config = config.get(str(level), {"green": 0, "purple": 0, "blue": 0})
+    level_config = config.get(str(level), {"green": 0, "purple": 0, "blue": 0, "red": 0})
 
     # Return the number of green and purple enemies for the level
     green_enemies = level_config.get("green", 0)
     purple_enemies = level_config.get("purple", 0)
     blue_enemies = level_config.get("blue", 0)
+    red_enemies = level_config.get("red", 0)
 
-    return {"green": green_enemies, "purple": purple_enemies, "blue": blue_enemies}
+    return {"green": green_enemies, "purple": purple_enemies, "blue": blue_enemies, "red": red_enemies}
 
 # Initialize level configuration
 level_config = load_level_config()
@@ -111,6 +113,14 @@ class Bullet:
                         enemies.append(new_enemy)  # Adjust spawn if needed based on position
                         enemies.remove(self.target)  # Remove the blue enemy
                         print("Blue enemy defeated and a purple enemy spawned!")
+                    elif isinstance(self.target, RedEnemy):
+                        money += self.target.reward
+                        new_enemy = BlueEnemy(path, offset=0)
+                        new_enemy.update_position(self.target.x, self.target.y, self.target.current_path_index, self.target.current_progress)
+                        # Create a new green enemy at the same position
+                        enemies.append(new_enemy)  # Adjust spawn if needed based on position
+                        enemies.remove(self.target)  # Remove the blue enemy
+                        print("Red enemy defeated and a blue enemy spawned!")
                     else:
                         print(f"Enemy at ({self.target.x}, {self.target.y}) defeated")
                         money += self.target.reward  # Add money when enemy is defeated
@@ -127,14 +137,14 @@ class Tower:
         self.color = BLUE
         self.cooldown = 0
         self.bullets = []
-        self.rate_of_fire = 10  # Fire rate in frames
+        self.rate_of_fire = 80 # Fire rate in frames
         self.last_shot_time = 0  # Time when the last shot was fired
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), 20)
         #pygame.draw.circle(screen, RED, (self.x, self.y), self.range, 1)
         range_surface = pygame.Surface((self.range * 2, self.range * 2), pygame.SRCALPHA)  # Create a surface for the range
-        pygame.draw.circle(range_surface, (255, 0, 0, 50), (self.range, self.range), self.range)  # Red with transparency
+        #pygame.draw.circle(range_surface, (255, 0, 0, 50), (self.range, self.range), self.range)  # Red with transparency
         screen.blit(range_surface, (self.x - self.range, self.y - self.range))
         
     
@@ -204,7 +214,7 @@ class Tower:
 
         self.target_enemy = max_progress_enemy
 
-
+#Base enemy AKA green enemy
 class Enemy:
     def __init__(self, path, offset=0):
         self.path = path
@@ -214,10 +224,10 @@ class Enemy:
         self.current_path_index = 0
         self.current_progress = 0.0
         self.speed = 1  # Default speed for green enemies
-        self.health = 5
+        self.health = 1
         self.max_health = self.health
         self.color = GREEN
-        self.reward = 10
+        self.reward = 1
 
     def move(self):
         if self.current_path_index < len(self.path) - 1:
@@ -272,20 +282,29 @@ class PurpleEnemy(Enemy):
     def __init__(self, path, offset=0):
         super().__init__(path, offset)  # Pass path and offset to superclass
         self.speed = 1.4  # Set speed for purple enemies
-        self.health = 8
+        self.health = 1
         self.max_health = self.health
         self.color = (128, 0, 128)  # Purple color
-        self.reward = 15  # Double the reward (15 instead of 10)
+        self.reward = 2  # Double the reward (15 instead of 10)
 
 class BlueEnemy(Enemy):
     def __init__(self, path, offset = 0):
         super().__init__(path, offset)
         self.speed = 1.85
-        self.health = 11
+        self.health = 1
         self.max_health = self.health
         self.color = (52, 119, 235)
-        self.reward = 20
+        self.reward = 3
 
+class RedEnemy(Enemy):
+    def __init__(self, path, offset = 0):
+        super().__init__(path, offset)
+        self.speed = 2.25
+        self.health = 1
+        self.max_health = self.health
+        self.color = (171, 3, 3)
+        self.reward = 5
+        
 def draw_path(screen, path):
     for i in range(len(path) - 1):
         pygame.draw.line(screen, BLACK, path[i], path[i + 1], 5)
@@ -322,20 +341,27 @@ def draw_level(screen, level):
     screen.blit(level_text, (10, 10))
 
 def start_next_level(start_level=False):
-    global level, enemies, level_timer, next_level_state, max_enemies, spawn_timer, enemies_spawned, can_start_next_level
+    global money, level, enemies, level_timer, next_level_state, max_enemies, spawn_timer, enemies_spawned, can_start_next_level
     if start_level:
         level = 1  # Start at level 1
     else:
         level += 1  # Increment the level
+        if level <= 3 and level > 1:
+            money += 145
+        elif level <= 6 and level > 3:
+            money += 235
+        elif level <= 10 and level > 6:
+            money += 295
+
 
     # Get the number of enemies for the current level from the config
     enemy_counts = get_number_of_enemies_for_level(level, level_config)
     
     # Store the total number of enemies (green + purple) for the level
-    max_enemies = enemy_counts["green"] + enemy_counts["purple"] + enemy_counts["blue"]
+    max_enemies = enemy_counts["green"] + enemy_counts["purple"] + enemy_counts["blue"] + enemy_counts["red"]
 
     # Print enemy counts once
-    print(f"Level {level} started with {enemy_counts['green']} green enemies and {enemy_counts['purple']} purple enemies and {enemy_counts['blue']} blue enemies")
+    print(f"Level {level} started with {enemy_counts['green']} green enemies and {enemy_counts['purple']} purple enemies and {enemy_counts['blue']} blue enemies and {enemy_counts['red']} red enemies")
 
     enemies = []
     enemies_spawned = 0
@@ -367,9 +393,10 @@ def spawn_enemy():
     green_enemies = enemy_counts["green"]
     purple_enemies = enemy_counts["purple"]
     blue_enemies = enemy_counts["blue"]
+    red_enemies = enemy_counts["red"]
     
     # Calculate the total number of enemies for the current level
-    total_enemies = green_enemies + purple_enemies + blue_enemies
+    total_enemies = green_enemies + purple_enemies + blue_enemies + red_enemies
 
     # Early exit if all enemies have been spawned
     if enemies_spawned >= total_enemies:
@@ -397,16 +424,24 @@ def spawn_enemy():
             print(f"Purple enemy spawned! Total spawned: {enemies_spawned}")
         
         # Spawn blue enemies next
-        elif enemies_spawned < total_enemies:
+        elif enemies_spawned < purple_enemies + blue_enemies:
             # Set the enemy's starting position to the first point in the path
             start_position = path[0]
             enemies.append(BlueEnemy(path, offset=0))  # Spawn enemy at the start of the path
             enemies_spawned += 1
             print(f"Blue enemy spawned! Total spawned: {enemies_spawned}")
+
+        # Spawn red enemies next
+        elif enemies_spawned < total_enemies:
+            # Set the enemy's starting position to the first point in the path
+            start_position = path[0]
+            enemies.append(RedEnemy(path, offset=0))  # Spawn enemy at the start of the path
+            enemies_spawned += 1
+            print(f"Red enemy spawned! Total spawned: {enemies_spawned}")
         
     
         # Print spawn check details after successfully spawning an enemy
-        print(f"Spawn check: Green: {green_enemies}, Purple: {purple_enemies}, Blue: {blue_enemies}, Total: {total_enemies}, Spawned: {enemies_spawned}")
+        print(f"Spawn check: Green: {green_enemies}, Purple: {purple_enemies}, Blue: {blue_enemies}, Red: {red_enemies} Total: {total_enemies}, Spawned: {enemies_spawned}")
 
         # Reset the spawn timer after an enemy is spawned
         spawn_timer = current_time
@@ -592,7 +627,7 @@ while running:
 
     # Update the display
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(120)
 
 # Quit pygame
 pygame.quit()
