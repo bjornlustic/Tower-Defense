@@ -54,6 +54,36 @@
         "green": 0,
         "purple": 12,
         "blue": 26,
-        "red": 9
-    }
+        "red": 12
+    },
+    "13": {
+        "green": 20,
+        "purple": 20,
+        "blue": 26,
+        "red": 16
+    },
+    "14": {
+        "green": 0,
+        "purple": 0,
+        "blue": 0,
+        "red": 30
+    },"15": {
+        "green": 0,
+        "purple": 0,
+        "blue": 0,
+        "red": 20,
+        "black" :12
+    },"16": {
+        "green": 0,
+        "purple": 0,
+        "blue": 0,
+        "red": 29,
+        "black" :18
+    },"17": {
+        "green": 0,
+        "purple": 0,
+        "blue": 0,
+        "red": 45,
+        "black" :15
+    }        
 }
