@@ -37,7 +37,9 @@ enemies_spawned = 0  # Track how many enemies have been spawned
 green_enemies = 0
 purple_enemies = 0
 blue_enemies = 0
+red_enemies = 0
 total_enemies = 0
+fps = 60
 
 # Load level configuration from a JSON file
 def load_level_config(filename='level_config.json'):
@@ -47,14 +49,16 @@ def load_level_config(filename='level_config.json'):
 # Use this function to get the number of enemies for the current level
 def get_number_of_enemies_for_level(level, config):
     # Default to an empty dictionary if the level is not found
-    level_config = config.get(str(level), {"green": 0, "purple": 0, "blue": 0})
+    level_config = config.get(str(level), {"green": 0, "purple": 0, "blue": 0, "red": 0, "black": 0})
 
     # Return the number of green and purple enemies for the level
     green_enemies = level_config.get("green", 0)
     purple_enemies = level_config.get("purple", 0)
     blue_enemies = level_config.get("blue", 0)
+    red_enemies = level_config.get("red", 0)
+    black_enemies = level_config.get("black", 0)
 
-    return {"green": green_enemies, "purple": purple_enemies, "blue": blue_enemies}
+    return {"green": green_enemies, "purple": purple_enemies, "blue": blue_enemies, "red": red_enemies, "black": black_enemies}
 
 # Initialize level configuration
 level_config = load_level_config()
@@ -111,6 +115,22 @@ class Bullet:
                         enemies.append(new_enemy)  # Adjust spawn if needed based on position
                         enemies.remove(self.target)  # Remove the blue enemy
                         print("Blue enemy defeated and a purple enemy spawned!")
+                    elif isinstance(self.target, RedEnemy):
+                        money += self.target.reward
+                        new_enemy = BlueEnemy(path, offset=0)
+                        new_enemy.update_position(self.target.x, self.target.y, self.target.current_path_index, self.target.current_progress)
+                        # Create a new green enemy at the same position
+                        enemies.append(new_enemy)  # Adjust spawn if needed based on position
+                        enemies.remove(self.target)  # Remove the red enemy
+                        print("Red enemy defeated and a blue enemy spawned!")
+                    elif isinstance(self.target, BlackEnemy):
+                        money += self.target.reward
+                        new_enemy = RedEnemy(path, offset=0)
+                        new_enemy.update_position(self.target.x, self.target.y, self.target.current_path_index, self.target.current_progress)
+                        # Create a new green enemy at the same position
+                        enemies.append(new_enemy)  # Adjust spawn if needed based on position
+                        enemies.remove(self.target)  # Remove the red enemy
+                        print("Black enemy defeated and a red enemy spawned!")
                     else:
                         print(f"Enemy at ({self.target.x}, {self.target.y}) defeated")
                         money += self.target.reward  # Add money when enemy is defeated
@@ -123,18 +143,18 @@ class Tower:
         self.x = x
         self.y = y
         self.range = 120  # Adjust the range as needed
-        self.cost = 250
+        self.cost = 375
         self.color = BLUE
         self.cooldown = 0
         self.bullets = []
-        self.rate_of_fire = 10  # Fire rate in frames
+        self.rate_of_fire = 80 # Fire rate in frames
         self.last_shot_time = 0  # Time when the last shot was fired
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), 20)
         #pygame.draw.circle(screen, RED, (self.x, self.y), self.range, 1)
         range_surface = pygame.Surface((self.range * 2, self.range * 2), pygame.SRCALPHA)  # Create a surface for the range
-        pygame.draw.circle(range_surface, (255, 0, 0, 50), (self.range, self.range), self.range)  # Red with transparency
+        #pygame.draw.circle(range_surface, (255, 0, 0, 50), (self.range, self.range), self.range)  # Red with transparency
         screen.blit(range_surface, (self.x - self.range, self.y - self.range))
         
     
@@ -145,7 +165,7 @@ class Tower:
     def shoot(self, enemies):
         current_time = pygame.time.get_ticks()  # Get current time in milliseconds
         # Check if enough time has passed since the last shot
-        if (current_time - self.last_shot_time) > (self.rate_of_fire * 1000 / 60):
+        if (current_time - self.last_shot_time) > (self.rate_of_fire * 1000 / (fps + 60)):
 
             # Initialize variable to track the best candidate enemy
             target_enemy = None
@@ -204,7 +224,15 @@ class Tower:
 
         self.target_enemy = max_progress_enemy
 
+class SniperTower(Tower):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.range = 360  # Adjust the range as needed
+        self.cost = 675
+        self.color = GREEN
+        self.rate_of_fire = 40 # Fire rate in frames
 
+#Base enemy AKA green enemy
 class Enemy:
     def __init__(self, path, offset=0):
         self.path = path
@@ -213,11 +241,11 @@ class Enemy:
         self.y = start_y + offset
         self.current_path_index = 0
         self.current_progress = 0.0
-        self.speed = 1  # Default speed for green enemies
-        self.health = 5
+        self.speed = 1.15 # Default speed for green enemies
+        self.health = 1
         self.max_health = self.health
         self.color = GREEN
-        self.reward = 10
+        self.reward = 1
 
     def move(self):
         if self.current_path_index < len(self.path) - 1:
@@ -271,21 +299,38 @@ class Enemy:
 class PurpleEnemy(Enemy):
     def __init__(self, path, offset=0):
         super().__init__(path, offset)  # Pass path and offset to superclass
-        self.speed = 1.4  # Set speed for purple enemies
-        self.health = 8
+        self.speed = 1.65  # Set speed for purple enemies
+        self.health = 1
         self.max_health = self.health
         self.color = (128, 0, 128)  # Purple color
-        self.reward = 15  # Double the reward (15 instead of 10)
+        self.reward = 2  # Double the reward (15 instead of 10)
 
 class BlueEnemy(Enemy):
     def __init__(self, path, offset = 0):
         super().__init__(path, offset)
-        self.speed = 1.85
-        self.health = 11
+        self.speed = 2.15
+        self.health = 1
         self.max_health = self.health
         self.color = (52, 119, 235)
-        self.reward = 20
+        self.reward = 3
 
+class RedEnemy(Enemy):
+    def __init__(self, path, offset = 0):
+        super().__init__(path, offset)
+        self.speed = 2.75
+        self.health = 1
+        self.max_health = self.health
+        self.color = (171, 3, 3)
+        self.reward = 5
+        
+class BlackEnemy(Enemy):
+    def __init__(self, path, offset = 0):
+        super().__init__(path, offset)
+        self.speed = 1.65
+        self.health = 3
+        self.max_health = self.health
+        self.color = (0,0,0)
+        self.reward = 1
 def draw_path(screen, path):
     for i in range(len(path) - 1):
         pygame.draw.line(screen, BLACK, path[i], path[i + 1], 5)
@@ -321,21 +366,33 @@ def draw_level(screen, level):
     level_text = font.render(f"Level: {level}", True, BLACK)
     screen.blit(level_text, (10, 10))
 
+def draw_fps(screen, fps):
+    fps_text = font.render(f"FPS: {fps}", True, BLACK)
+    screen.blit(fps_text, (WIDTH - 220, 130))
+
 def start_next_level(start_level=False):
-    global level, enemies, level_timer, next_level_state, max_enemies, spawn_timer, enemies_spawned, can_start_next_level
+    global money, level, enemies, level_timer, next_level_state, max_enemies, spawn_timer, enemies_spawned, can_start_next_level
     if start_level:
         level = 1  # Start at level 1
     else:
         level += 1  # Increment the level
+        if level <= 3 and level > 1:
+            money += 150
+        elif level <= 6 and level > 3:
+            money += 150
+        elif level <= 10 and level > 6:
+            money += 150
+
 
     # Get the number of enemies for the current level from the config
     enemy_counts = get_number_of_enemies_for_level(level, level_config)
     
     # Store the total number of enemies (green + purple) for the level
-    max_enemies = enemy_counts["green"] + enemy_counts["purple"] + enemy_counts["blue"]
+    max_enemies = enemy_counts["green"] + enemy_counts["purple"] + enemy_counts["blue"] + enemy_counts["red"] + enemy_counts["black"]
+
 
     # Print enemy counts once
-    print(f"Level {level} started with {enemy_counts['green']} green enemies and {enemy_counts['purple']} purple enemies and {enemy_counts['blue']} blue enemies")
+    print(f"Level {level} started with {enemy_counts['green']} green enemies and {enemy_counts['purple']} purple enemies and {enemy_counts['blue']} blue enemies and {enemy_counts['red']} red enemies and {enemy_counts['black']} black enemies")
 
     enemies = []
     enemies_spawned = 0
@@ -358,7 +415,7 @@ def is_valid_position(mouse_x, mouse_y, towers, tower_radius):
     return True
 
 def spawn_enemy():
-    global spawn_timer, enemies_spawned, green_enemies, purple_enemies, blue_enemies, total_enemies, all_enemies_spawned_printed
+    global spawn_timer, enemies_spawned, green_enemies, purple_enemies, blue_enemies, red_enemies, total_enemies, all_enemies_spawned_printed
 
     current_time = time.time()
 
@@ -367,9 +424,10 @@ def spawn_enemy():
     green_enemies = enemy_counts["green"]
     purple_enemies = enemy_counts["purple"]
     blue_enemies = enemy_counts["blue"]
-    
+    red_enemies = enemy_counts["red"]
+    black_enemies = enemy_counts["black"]
     # Calculate the total number of enemies for the current level
-    total_enemies = green_enemies + purple_enemies + blue_enemies
+    total_enemies = green_enemies + purple_enemies + blue_enemies + red_enemies+black_enemies
 
     # Early exit if all enemies have been spawned
     if enemies_spawned >= total_enemies:
@@ -397,22 +455,40 @@ def spawn_enemy():
             print(f"Purple enemy spawned! Total spawned: {enemies_spawned}")
         
         # Spawn blue enemies next
-        elif enemies_spawned < total_enemies:
+        elif enemies_spawned < green_enemies + purple_enemies + blue_enemies:
             # Set the enemy's starting position to the first point in the path
             start_position = path[0]
             enemies.append(BlueEnemy(path, offset=0))  # Spawn enemy at the start of the path
             enemies_spawned += 1
             print(f"Blue enemy spawned! Total spawned: {enemies_spawned}")
+
+        # Spawn red enemies next
+        elif enemies_spawned < green_enemies + purple_enemies + blue_enemies + red_enemies:
+            # Set the enemy's starting position to the first point in the path
+            start_position = path[0]
+            enemies.append(RedEnemy(path, offset=0))  # Spawn enemy at the start of the path
+            enemies_spawned += 1
+            print(f"Red enemy spawned! Total spawned: {enemies_spawned}")
+
+        elif enemies_spawned < total_enemies:
+            # Set the enemy's starting position to the first point in the path
+            start_position = path[0]
+            enemies.append(BlackEnemy(path, offset=0))  # Spawn enemy at the start of the path
+            enemies_spawned += 1
+            print(f"Red enemy spawned! Total spawned: {enemies_spawned}")
+
+        
         
     
         # Print spawn check details after successfully spawning an enemy
-        print(f"Spawn check: Green: {green_enemies}, Purple: {purple_enemies}, Blue: {blue_enemies}, Total: {total_enemies}, Spawned: {enemies_spawned}")
+        print(f"Spawn check: Green: {green_enemies}, Purple: {purple_enemies}, Blue: {blue_enemies}, Red: {red_enemies}, Black: {black_enemies} Total: {total_enemies}, Spawned: {enemies_spawned}")
 
         # Reset the spawn timer after an enemy is spawned
         spawn_timer = current_time
 
 # Define the path for enemies
 path = [(50, 50), (200, 50), (200, 200), (400, 200), (400, 400), (600, 400), (600, 550)]
+
 
 # Create a separate surface for the path
 path_surface = pygame.Surface((WIDTH, HEIGHT))
@@ -432,7 +508,7 @@ BACKGROUND_COLOR = WHITE
 # Game loop
 towers = []
 enemies = []
-money = 600
+money = 675
 lives = 25
 # Define the tower button rectangle
 tower_button_rect = pygame.Rect(10, HEIGHT - 60, 150, 50)  
@@ -440,6 +516,7 @@ tower_button_rect = pygame.Rect(10, HEIGHT - 60, 150, 50)
 running = True
 tower_selected = False
 placing_tower = False  # Flag to indicate if the player is in tower placement mode
+placing_sniper_tower = False #Flag to indicate if the player is in sniper tower placement mode
 current_tower_position = None  # To track the current position of the tower being placed
 
 # Change initial level to 0
@@ -474,13 +551,13 @@ def draw_game_elements(screen):
     draw_level(screen, level)
 
     # Draw the tower button with color based on money available
-    if money >= 250:
+    if money >= 375:
         pygame.draw.rect(screen, GREEN, tower_button_rect)
     else:
         pygame.draw.rect(screen, RED, tower_button_rect)
 
     # Draw the tower button text
-    button_text = font.render("Tower (250)", True, WHITE)
+    button_text = font.render("Tower (375)", True, WHITE)
     screen.blit(button_text, (tower_button_rect.x + 10, tower_button_rect.y + 10))
 
 while running:
@@ -491,6 +568,22 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1 and money >= 375:
+                print("1 button is BEING PRESSED FOR MAXWELL'S HEALTH")
+                tower_selected = True  # A tower has been selected
+                placing_tower = True    # Begin the placement process
+            if event.key == pygame.K_2 and money >= 675:
+                print("2 button is BEING PRESSED FOR MAXWELL'S SNIPER")
+                tower_selected = True  # A tower has been selected
+                placing_sniper_tower = True    # Begin the placement process
+            if event.key == pygame.K_EQUALS and fps < 240:
+                print("speeding up time")
+                fps += 30
+            if event.key == pygame.K_MINUS and fps > 60:
+                print("speeding down time")
+                fps -= 30
 
         # Handle mouse button click for starting the game or next level
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -505,7 +598,7 @@ while running:
                     start_next_level()  # Call without arguments to proceed to the next level
 
             # Check if the click is on the tower button (assuming you have a button rect)
-            if tower_button_rect.collidepoint(mouse_x, mouse_y) and money >= 250:
+            if tower_button_rect.collidepoint(mouse_x, mouse_y) and money >= 375:
                 tower_selected = True  # A tower has been selected
                 placing_tower = True    # Begin the placement process
 
@@ -514,8 +607,19 @@ while running:
                 # Check if it's in a valid position (not too close to path)
                 if not is_near_path(mouse_x, mouse_y, path_surface, radius=25) and is_valid_position(mouse_x, mouse_y, towers, tower_radius):  # Check placement validity
                     towers.append(Tower(mouse_x, mouse_y))  # Place the tower
-                    money -= 250
+                    money -= 375
                     placing_tower = False  # Finish placement
+                    tower_selected = False  # Reset the selection state
+                else:
+                # Optional: Feedback if trying to place in an invalid area
+                    print("Invalid position! Too close to the path.")
+            
+            elif placing_sniper_tower:
+                # Check if it's in a valid position (not too close to path)
+                if not is_near_path(mouse_x, mouse_y, path_surface, radius=25) and is_valid_position(mouse_x, mouse_y, towers, tower_radius):  # Check placement validity
+                    towers.append(SniperTower(mouse_x, mouse_y))  # Place the tower
+                    money -= 675
+                    placing_sniper_tower = False  # Finish placement
                     tower_selected = False  # Reset the selection state
                 else:
                 # Optional: Feedback if trying to place in an invalid area
@@ -541,6 +645,9 @@ while running:
             if placing_tower:
                 tower.draw_range(screen)  # Show the range of the current tower being placed
 
+            if placing_sniper_tower:
+                tower.draw_range(screen)  # Show the range of the current tower being placed
+
         # Spawn enemies and move them
         spawn_enemy()
 
@@ -558,14 +665,16 @@ while running:
         if level >= 1:
             draw_level(screen, level)
 
+        draw_fps(screen, fps)
+
         # Draw the tower button with color based on money available
-        if money >= 250:
+        if money >= 375:
             pygame.draw.rect(screen, GREEN, tower_button_rect)
         else:
             pygame.draw.rect(screen, RED, tower_button_rect)
 
         # Draw the tower button text
-        button_text = font.render("Tower (250)", True, WHITE)
+        button_text = font.render("Tower (375)", True, WHITE)
         screen.blit(button_text, (tower_button_rect.x + 10, tower_button_rect.y + 10))
     
     # Modified tower placement logic with path proximity check
@@ -586,13 +695,30 @@ while running:
         temp_tower = Tower(current_mouse_x, current_mouse_y)
         temp_tower.draw_range(screen)
 
+    if placing_sniper_tower:
+        # Get the current mouse position
+        current_mouse_x, current_mouse_y = pygame.mouse.get_pos()
+
+        # Check if it's too close to the path to decide color
+        if is_near_path(current_mouse_x, current_mouse_y, path_surface, radius=25) or not is_valid_position(current_mouse_x, current_mouse_y, towers, tower_radius):
+            tower_color = RED  # Invalid position (too close to path)
+        else:
+            tower_color = GREEN  # Valid position
+
+        # Draw the tower in the temporary position (hovering with the mouse)
+        pygame.draw.circle(screen, tower_color, (current_mouse_x, current_mouse_y), 20)
+
+        # Optionally draw the range of the tower while placing
+        temp_tower = SniperTower(current_mouse_x, current_mouse_y)
+        temp_tower.draw_range(screen)
+
     # Check for level progression
     if len(enemies) == 0 and enemies_spawned >= total_enemies:
         can_start_next_level = True  # Allow starting the next level
 
     # Update the display
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(fps)
 
 # Quit pygame
 pygame.quit()
