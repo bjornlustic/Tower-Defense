@@ -227,10 +227,10 @@ class Tower:
 class SniperTower(Tower):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.range = 360  # Adjust the range as needed
+        self.range = 260  # Adjust the range as needed
         self.cost = 675
         self.color = GREEN
-        self.rate_of_fire = 40 # Fire rate in frames
+        self.rate_of_fire = 160 # Fire rate in frames
 
 #Base enemy AKA green enemy
 class Enemy:
@@ -709,8 +709,8 @@ while running:
         pygame.draw.circle(screen, tower_color, (current_mouse_x, current_mouse_y), 20)
 
         # Optionally draw the range of the tower while placing
-        temp_tower = SniperTower(current_mouse_x, current_mouse_y)
-        temp_tower.draw_range(screen)
+        temp_sniper_tower = SniperTower(current_mouse_x, current_mouse_y)
+        temp_sniper_tower.draw_range(screen)
 
     # Check for level progression
     if len(enemies) == 0 and enemies_spawned >= total_enemies:
